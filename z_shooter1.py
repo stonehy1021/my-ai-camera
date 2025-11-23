@@ -20,8 +20,8 @@ st.info("아이폰/갤럭시/PC 모두 작동합니다.")
 # ---------------- 사이드바 설정 ----------------
 st.sidebar.header("⚙️ 설정")
 # 모바일 화각 특성상 Z값 차이가 작게 나오므로 범위를 0.02~0.15로 잡습니다.
-min_val = st.sidebar.slider("최소 각도", 0.0, 0.3, 0.02, 0.01)
-max_val = st.sidebar.slider("최대 각도", 0.0, 0.3, 0.15, 0.01)
+min_val = st.sidebar.slider("최소 각도", 0.0, 0.3, 0.15, 0.01)
+max_val = st.sidebar.slider("최대 각도", 0.0, 0.3, 0.20, 0.01)
 
 # ---------------- Mediapipe 초기화 ----------------
 mp_face_mesh = mp.solutions.face_mesh
@@ -78,7 +78,7 @@ class VideoProcessor(VideoProcessorBase):
             # 여기서는 안전하게 넓은 범위(0.02~0.20)를 기본 로직으로 잡습니다.
             # (실제로는 recv 함수 밖에서 값을 주입받아야 하지만, 간단한 구현을 위해 고정 로직 사용)
             
-            if 0.17 <= current_z <= 0.23: # 모바일용 추천 범위
+            if 0.02 <= current_z <= 0.15: # 모바일용 추천 범위
                 in_range = True
                 border_color = (0, 255, 0) # 초록
                 status_msg = "HOLD ON!"
