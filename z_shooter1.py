@@ -14,12 +14,8 @@ st.set_page_config(page_title="mz구도 촬영기 (저장가능)", layout="cente
 if "snapshot" not in st.session_state:
     st.session_state.snapshot = None
 
-# [수정 3] 카메라 먹통 방지용 버전 키 (재촬영 시 이 숫자를 바꿔서 아예 새 창을 띄움)
-if "camera_key" not in st.session_state:
-    st.session_state.camera_key = 0
-
 st.title("📸 mz구도 자동 촬영기 ")
-st.info("원하는 각도를 설정하고 촬영하세요!")
+st.info("설정한 각도에 맞춰 고개를 들면 3초 뒤 자동 촬영됩니다!")
 
 # ---------------- 2. 사이드바 설정 ----------------
 st.sidebar.header("⚙️ 설정")
@@ -45,7 +41,7 @@ class VideoProcessor(VideoProcessorBase):
         self.flash_frame = 0
         self.result_queue = queue.Queue()
         
-        # [수정 2] 외부에서 설정값을 받을 변수 추가 (기본값 설정)
+        # 외부에서 설정값을 받을 변수 (기본값)
         self.min_val = 0.02
         self.max_val = 0.20
 
@@ -59,9 +55,10 @@ class VideoProcessor(VideoProcessorBase):
         
         current_z = 0.0
         in_range = False
-        border_color = (0, 0, 255)
+        border_color = (0, 0, 255) # 빨강
         status_msg = "Adjust Angle"
         
+        # 플래시 효과 로직
         if self.flash_frame > 0:
             self.flash_frame -= 1
             white = np.full((h, w, 3), 255, dtype=np.uint8)
@@ -72,20 +69,22 @@ class VideoProcessor(VideoProcessorBase):
             chin = landmarks[152].z
             forehead = landmarks[10].z
             
-            # [수정 1] * -1 제거 (양수 값이 나오도록)
+            # [수정됨] * -1 제거하여 양수 값 확보
             current_z = (chin - forehead)
             
-            # [수정 2] 하드코딩 대신 self 변수 사용
+            # [수정됨] 슬라이더 설정값 적용
             if self.min_val <= current_z <= self.max_val:
                 in_range = True
-                border_color = (0, 255, 0)
+                border_color = (0, 255, 0) # 초록
                 status_msg = "HOLD ON!"
             
             # 화면 그리기
             cv2.rectangle(img, (0,0), (w,h), border_color, 20)
-            # 디버깅용: 현재 설정 범위도 화면에 표시해주면 좋음
-            info_text = f"Z: {current_z:.3f} ({self.min_val}~{self.max_val})"
-            cv2.putText(img, info_text, (30, 80), cv2.FONT_HERSHEY_SIMPLEX, 1.0, border_color, 2)
+            
+            # 디버깅용: 현재 Z값과 목표 범위 표시
+            info_text = f"Z: {current_z:.3f} (Goal: {self.min_val}~{self.max_val})"
+            cv2.putText(img, info_text, (30, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.8, border_color, 2)
+            cv2.putText(img, status_msg, (30, 100), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255,255,255), 2)
             
             if in_range:
                 if self.enter_time is None:
@@ -98,6 +97,7 @@ class VideoProcessor(VideoProcessorBase):
                     cx, cy = w//2, h//2
                     cv2.putText(img, f"{countdown:.1f}", (cx-50, cy+20), cv2.FONT_HERSHEY_SIMPLEX, 4, (0, 255, 255), 5)
                 else:
+                    # ★ 촬영 시점 ★
                     if not self.capture_triggered:
                         if time.time() - self.last_capture_time > 3:
                             save_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -113,54 +113,46 @@ class VideoProcessor(VideoProcessorBase):
 
 # ---------------- 5. UI 로직 ----------------
 
-# 사진이 찍혔을 때
+# 1. 사진이 찍힌 상태 (결과 화면)
 if st.session_state.snapshot is not None:
-    st.success("📸 인생샷 건짐!")
+    st.success("📸 촬영 완료!")
     
     # 이미지 표시
     st.image(st.session_state.snapshot, caption="결과물", use_container_width=True)
     
-    # 저장 버튼용 이미지 변환
+    # 저장 버튼 생성
     img_bgr = cv2.cvtColor(st.session_state.snapshot, cv2.COLOR_RGB2BGR)
     is_success, buffer = cv2.imencode(".jpg", img_bgr)
     
-    col1, col2 = st.columns([1, 1])
+    if is_success:
+        st.download_button(
+            label="📥 사진 저장하기",
+            data=buffer.tobytes(),
+            file_name=f"MZ_Shot_{int(time.time())}.jpg",
+            mime="image/jpeg",
+            type="primary",
+            use_container_width=True
+        )
     
-    with col1:
-        if is_success:
-            st.download_button(
-                label="📥 저장하기",
-                data=buffer.tobytes(),
-                file_name=f"MZ_Shot_{int(time.time())}.jpg",
-                mime="image/jpeg",
-                type="primary",
-                use_container_width=True
-            )
-            
-    with col2:
-        # [수정 3] 다시 찍기: 카메라 키를 변경하여 강제 리로드 효과
-        if st.button("🔄 다시 찍기 (새로고침)", use_container_width=True):
-            st.session_state.snapshot = None
-            st.session_state.camera_key += 1 # 키 변경 -> 컴포넌트 재마운트 유도
-            st.rerun()
+    # [변경됨] 다시 찍기 버튼 삭제하고 안내 문구 추가
+    st.warning("🔄 다시 촬영하시려면 웹페이지를 새로고침 해주세요.")
 
-# 촬영 모드 (사진이 없을 때)
+# 2. 촬영 모드 (사진이 없는 상태)
 else:
-    # [수정 3] key에 변수를 넣어 매번 새로운 컴포넌트인 것처럼 인식시킴
-    dynamic_key = f"mobile-camera-{st.session_state.camera_key}"
-    
+    # 카메라 실행
     ctx = webrtc_streamer(
-        key=dynamic_key,
+        key="mz-camera",
         video_processor_factory=VideoProcessor,
         rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
         media_stream_constraints={"video": {"facingMode": "user"}, "audio": False},
     )
 
-    # [수정 2] 실시간으로 슬라이더 값을 Processor에 주입
+    # [중요] 실시간으로 슬라이더 값을 Processor 클래스에 주입
     if ctx.video_processor:
         ctx.video_processor.min_val = min_val
         ctx.video_processor.max_val = max_val
 
+    # 사진 수신 대기 루프
     if ctx.state.playing:
         while True:
             if ctx.video_processor:
@@ -168,7 +160,7 @@ else:
                     result_img = ctx.video_processor.result_queue.get(timeout=0.1)
                     if result_img is not None:
                         st.session_state.snapshot = result_img
-                        st.rerun()
+                        st.rerun() # 화면 전환
                 except queue.Empty:
                     pass
             time.sleep(0.1)
