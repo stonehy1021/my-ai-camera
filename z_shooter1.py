@@ -78,7 +78,7 @@ class VideoProcessor(VideoProcessorBase):
             # 여기서는 안전하게 넓은 범위(0.02~0.20)를 기본 로직으로 잡습니다.
             # (실제로는 recv 함수 밖에서 값을 주입받아야 하지만, 간단한 구현을 위해 고정 로직 사용)
             
-            if 0.02 <= current_z <= 0.15: # 모바일용 추천 범위
+            if 0.17 <= current_z <= 0.23: # 모바일용 추천 범위
                 in_range = True
                 border_color = (0, 255, 0) # 초록
                 status_msg = "HOLD ON!"
