@@ -14,7 +14,7 @@ st.set_page_config(page_title="mz 구도 카메라", layout="centered")
 SAVE_DIR = Path("captures")
 SAVE_DIR.mkdir(exist_ok=True)
 
-st.title("📸 모바일 AI 자동 촬영기")
+st.title("📸 mz구도 자동 촬영기")
 st.info("아이폰/갤럭시/PC 모두 작동합니다.")
 
 # ---------------- 사이드바 설정 ----------------
