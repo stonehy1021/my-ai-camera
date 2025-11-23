@@ -67,7 +67,7 @@ class VideoProcessor(VideoProcessorBase):
             landmarks = results.multi_face_landmarks[0].landmark
             chin = landmarks[152].z
             forehead = landmarks[10].z
-            current_z = (chin - forehead) * -1 
+            current_z = (chin - forehead)
             
             # 범위 체크 (0.02 ~ 0.15)
             # (클래스 내부라 슬라이더 값을 직접 받기 어려워 모바일 최적값으로 고정하거나 넓게 잡음)
